@@ -2,6 +2,8 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from PIL import Image, ImageDraw, ImageFont
+import io
 
 # Enable logging
 logging.basicConfig(
@@ -10,85 +12,78 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Get bot token from environment variable or use default
-BOT_TOKEN = os.getenv('BOT_TOKEN', '8509238155:AAF282n8AqEaFh8yCezm4HBZqOT6UFFE8KA')
+# Bot token from environment variable
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 
-# Log token status (without exposing full token)
-if os.getenv('BOT_TOKEN'):
-    logger.info("Using BOT_TOKEN from environment variable")
-else:
-    logger.info("Using default BOT_TOKEN from code")
+# Create a welcome image with text
+def create_welcome_image():
+    # Create a new image with a dark background
+    width, height = 800, 400
+    image = Image.new('RGB', (width, height), color='#1a1a1a')
+    draw = ImageDraw.Draw(image)
+    
+    try:
+        # Try to use a font (this might need adjustment based on your system)
+        font_large = ImageFont.truetype("arial.ttf", 36)
+        font_small = ImageFont.truetype("arial.ttf", 24)
+    except:
+        # Fallback to default font
+        font_large = ImageFont.load_default()
+        font_small = ImageFont.load_default()
+    
+    # Add title
+    title = "Welcome to Our Trading Community!"
+    title_bbox = draw.textbbox((0, 0), title, font=font_large)
+    title_width = title_bbox[2] - title_bbox[0]
+    title_height = title_bbox[3] - title_bbox[1]
+    
+    draw.text(((width - title_width) / 2, 50), title, fill='#00ff00', font=font_large)
+    
+    # Add subtitle
+    subtitle = "Start Your Journey to Profitable Trading"
+    subtitle_bbox = draw.textbbox((0, 0), subtitle, font=font_small)
+    subtitle_width = subtitle_bbox[2] - subtitle_bbox[0]
+    
+    draw.text(((width - subtitle_width) / 2, 120), subtitle, fill='#ffffff', font=font_small)
+    
+    # Add some decorative elements
+    draw.rectangle([50, 180, width - 50, 182], fill='#00ff00')
+    
+    # Convert to bytes
+    img_byte_arr = io.BytesIO()
+    image.save(img_byte_arr, format='PNG')
+    img_byte_arr.seek(0)
+    
+    return img_byte_arr
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
-    try:
-        user = update.effective_user
-        logger.info(f"Start command received from user: {user.id if user else 'Unknown'}")
-        
-        keyboard = [
-            [InlineKeyboardButton("Show Content", callback_data="show_content")],
-            [InlineKeyboardButton("Show Done", callback_data="show_done")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.message.reply_text(
-            f"Hello {user.first_name}! 👋 Welcome to the Trading Bot!\n\nClick the button below to see our amazing offers.",
-            reply_markup=reply_markup
-        )
-        logger.info("Start message sent successfully")
-        
-    except Exception as e:
-        logger.error(f"Error in start command: {e}")
+    user = update.effective_user
+    
+    # Create inline keyboard with a button
+    keyboard = [
+        [InlineKeyboardButton("🚀 Get Started", callback_data='show_content')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    # Create and send welcome image
+    welcome_image = create_welcome_image()
+    
+    # Send the image with caption and button
+    await update.message.reply_photo(
+        photo=welcome_image,
+        caption=f"Hi {user.first_name}! 👋\n\nClick the button below to see our amazing offers!",
+        reply_markup=reply_markup
+    )
 
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle button callbacks."""
-    try:
-        query = update.callback_query
-        await query.answer()
-        logger.info(f"Button callback received: {query.data}")
-        
-        if query.data == "show_content":
-            # Using a placeholder image - replace with your actual image URL
-            image_url = "https://images.unsplash.com/photo-1640340434855-6084b1f4901c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-            
-            try:
-                await query.message.reply_photo(
-                    photo=image_url,
-                    caption=get_trading_content(),
-                    parse_mode='HTML'
-                )
-                logger.info("Trading content sent with image")
-            except Exception as e:
-                logger.error(f"Error sending image: {e}")
-                # Fallback to text only
-                await query.message.reply_text(
-                    get_trading_content(),
-                    parse_mode='HTML'
-                )
-        
-        elif query.data == "show_done":
-            await query.message.reply_text(
-                get_done_content(),
-                parse_mode='HTML'
-            )
-            logger.info("Done content sent")
-            
-    except Exception as e:
-        logger.error(f"Error in button callback: {e}")
-
-async def done_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Show the done message via command."""
-    try:
-        await update.message.reply_text(
-            get_done_content(),
-            parse_mode='HTML'
-        )
-        logger.info("Done command executed")
-    except Exception as e:
-        logger.error(f"Error in done command: {e}")
-
-def get_trading_content():
-    return """🌐 <b>If You Are A Trader and want To Make Profit Then Welcome To Our Community!</b> 🔥
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle button clicks."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == 'show_content':
+        # Your content with formatting
+        content = """🌐 *if You Are A Trader and want To Make Profit Then Welcome To Our Community*! 🔥
 
 We will help You To Recover Your Losses, Just Join our 20$ To 2000$ Compounding Session Daily 💵
 
@@ -102,53 +97,38 @@ We will help You To Recover Your Losses, Just Join our 20$ To 2000$ Compounding 
 
 🙋‍♂️ Let's make profitable trades together!
 
-💥 <b>Join the Winning Team NOW!</b> 💥
+💥 *Join the Winning Team NOW*! 💥
 ⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️
 
 https://t.me/+JBiO5pr6629mOTI1
 
 https://t.me/+JBiO5pr6629mOTI1"""
-
-def get_done_content():
-    return """✅ <b>Done! Congratulations on your new bot.</b>
-
-⚠️ <i>Keep your token secure and store it safely, it can be used by anyone to control your bot.</i>
-
-For a description of the Bot API, see this page: 
-https://core.telegram.org/bots/api"""
-
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Log errors caused by updates."""
-    logger.error(f"Exception while handling an update: {context.error}")
+        
+        # Send the content as a new message
+        await query.message.reply_text(
+            content,
+            parse_mode='Markdown',
+            disable_web_page_preview=False
+        )
+        
+        # Send the confirmation message
+        await query.message.reply_text(
+            "✅ *Done! Congratulations on your new bot.*",
+            parse_mode='Markdown'
+        )
 
 def main() -> None:
     """Start the bot."""
-    try:
-        # Create the Application
-        application = Application.builder().token(BOT_TOKEN).build()
-        
-        # Test bot connection
-        logger.info("Testing bot connection...")
-        
-        # Add handlers
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("done", done_command))
-        application.add_handler(CallbackQueryHandler(button_callback))
-        application.add_error_handler(error_handler)
-        
-        logger.info("Bot starting...")
-        print("🤖 Bot is running and waiting for messages...")
-        print(f"🤖 Bot token source: {'Environment' if os.getenv('BOT_TOKEN') else 'Code'}")
-        
-        # Start polling
-        application.run_polling(
-            poll_interval=1.0,
-            timeout=20,
-            drop_pending_updates=True
-        )
-        
-    except Exception as e:
-        logger.error(f"Failed to start bot: {e}")
+    # Create the Application
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    # Add handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_handler))
+
+    # Start the Bot
+    print("Bot is running...")
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
