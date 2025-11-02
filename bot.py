@@ -37,9 +37,9 @@ We will help You To Recover Your Losses, Just Join our 20$ To 2000$ Compounding 
 💥 Join the Winning Team NOW! 💥
 ⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️
 
-https://t.me/+JBiO5pr6629mOTI1
+https://t.me/+eabn_K2wO6kwNjQ9
 
-https://t.me/+JBiO5pr6629mOTI1"""
+https://t.me/+eabn_K2wO6kwNjQ9"""
 
 # Completion message
 COMPLETION_MESSAGE = "Done! Congratulations on your new bot."
